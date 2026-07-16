@@ -32,6 +32,8 @@
     "@nx/eslint-plugin": "18.3.5",
     "@nx/jest": "18.3.5",
     "@nx/js": "18.3.5",
+    "@nx/web": "18.3.5",
+    "@nx/webpack": "18.3.5",
     "@nx/workspace": "18.3.5",
     "@schematics/angular": "~17.3.0",
     "@swc-node/register": "~1.8.0",

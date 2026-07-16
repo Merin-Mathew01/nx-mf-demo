@@ -1,0 +1,23 @@
+<div class="login-container">
+    <div class="login-card">
+        <h2>Welcome</h2>
+        <p>Sign in to continue</p>
+        <form [formGroup]="loginForm" (ngSubmit)="login()">
+            <div class="form-group">
+                <label for="">Username</label>
+                <input type="text" formControlName="username" placeholder="Enter Username">
+            </div>
+            @if(loginForm.get('username')?.invalid && loginForm.get('username')?.touched){
+                <small>*Please enter valid username</small>
+            }
+            <div class="form-group">
+                <label for="">Password</label>
+                <input type="password" formControlName="password" placeholder="Enter password">
+            </div>
+            @if(loginForm.get('password')?.invalid && loginForm.get('password')?.touched){
+                <small>*Password must be at least 6 characters.</small>
+            }
+            <button type="submit" [disabled]="loginForm.invalid">Login</button>
+        </form>
+    </div>
+</div>

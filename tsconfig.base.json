@@ -14,7 +14,11 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@nx-demo/shared/ui": ["shared/ui/src/index.ts"],
+      "reports/Routes": ["apps/reports/src/app/remote-entry/entry.routes.ts"],
+      "upload/Routes": ["apps/upload/src/app/remote-entry/entry.routes.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

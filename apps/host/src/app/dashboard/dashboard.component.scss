@@ -1,0 +1,63 @@
+.welcome-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 60px;
+  background: linear-gradient(135deg, #1e3a75, #05184e);
+  color: white;
+  border-radius: 16px;
+  margin: 30px;
+  overflow: hidden;
+}
+
+.welcome-content {
+  max-width: 600px;
+}
+
+.welcome-content h1 {
+  font-size: 42px;
+  margin-bottom: 15px;
+}
+
+.welcome-content p {
+  font-size: 18px;
+  line-height: 1.7;
+  margin-bottom: 30px;
+  color: #e2e8f0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.primary-btn,
+.secondary-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.primary-btn {
+  background: white;
+  color: #2563eb;
+  border: none;
+}
+
+.primary-btn:hover {
+  background: #f1f5f9;
+}
+
+.secondary-btn {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+.secondary-btn:hover {
+  background: white;
+  color: #2563eb;
+}
+
