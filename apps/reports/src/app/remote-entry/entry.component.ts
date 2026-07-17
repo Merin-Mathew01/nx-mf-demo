@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NxWelcomeComponent } from './nx-welcome.component';
+import { ReportsPageComponent } from '../reports-page/reports-page.component';
 
 @Component({
   standalone: true,
-  imports: [CommonModule, NxWelcomeComponent],
+  imports: [CommonModule, ReportsPageComponent],
   selector: 'app-reports-entry',
-  template: `<app-nx-welcome></app-nx-welcome>`,
+  template: `<app-reports-page></app-reports-page>`,
 })
 export class RemoteEntryComponent {}
