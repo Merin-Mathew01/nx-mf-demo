@@ -9,4 +9,11 @@ import { RouterLink } from '@angular/router';
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss',
 })
-export class NavbarComponent {}
+export class NavbarComponent {
+   // to store and display user details
+  username = ""
+
+  ngOnInit() {
+    this.username = sessionStorage.getItem('username') || ''
+  }
+}

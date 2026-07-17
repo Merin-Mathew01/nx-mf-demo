@@ -1,1 +1,48 @@
+<lib-navbar></lib-navbar>
+<div class="upload-page">
+    <div class="upload-card">
 
+        <h1>Upload File</h1>
+        <p class="subtitle">
+            Upload your document for processing
+        </p>
+
+        <div class="upload-area">
+
+            <h3>Drag & Drop your file here</h3>
+
+            <span>or</span>
+
+            <input type="file" id="fileInput" hidden (change)="onFileSelected($event)" accept=".xls,xlxs" />
+
+            <label for="fileInput" class="browse-btn">
+                Browse Files
+            </label>
+
+            <p class="file-types">
+                DOCX,xls,xlxs Max 25 MB
+            </p>
+        </div>
+        @if(selectedFile){
+            <div class="selected-file">
+                <div>
+                    <strong>{{ selectedFile.name }}</strong>
+                    <small>{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</small>
+                </div>
+
+                <button class="remove-btn" (click)="removeFile()">
+                    ✕
+                </button>
+            </div>
+        }
+
+
+        <button class="upload-btn" [disabled]="!selectedFile" (click)="upload()">
+            Upload File
+        </button>
+
+    </div>
+</div>
+
+
+<lib-footer></lib-footer>

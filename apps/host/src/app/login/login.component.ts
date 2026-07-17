@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import {ApiService} from '@nx-demo/shared/data-access'
 
 @Component({
   selector: 'app-login',
@@ -15,6 +16,7 @@ export class LoginComponent {
   fb = inject(FormBuilder)
   loginForm:FormGroup
   route = inject(Router)
+  api = inject(ApiService)
 
   constructor(){
     this.loginForm = this.fb.group({
@@ -26,8 +28,19 @@ export class LoginComponent {
 
   login(){
     if(this.loginForm.valid){
-      this.route.navigateByUrl('/dashboard')
-      alert("Login Successfull")
+      this.api.loginAPI(this.loginForm.value).subscribe({
+        next:((res:any)=>{
+          const username = this.loginForm.value.username
+          sessionStorage.setItem('username',username)
+          alert(res.message)
+          this.route.navigateByUrl('/dashboard')
+        }),
+        error:(reason)=>{
+          console.log(reason);
+        }
+      })
+    }else{
+      alert("Form Invalid")
     }
   }
 
