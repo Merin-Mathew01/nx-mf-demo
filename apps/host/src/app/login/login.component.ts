@@ -44,4 +44,10 @@ export class LoginComponent {
     }
   }
 
+
+  logout(){
+    sessionStorage.clear()
+    this.route.navigateByUrl('/')
+  }
+
 }

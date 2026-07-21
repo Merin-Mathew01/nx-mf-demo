@@ -17,7 +17,7 @@
         "tsConfig": "apps/reports/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
         "assets": ["apps/reports/src/favicon.ico", "apps/reports/src/assets"],
-        "styles": ["apps/reports/src/styles.scss"],
+        "styles": ["node_modules/@progress/kendo-theme-default/dist/all.css","apps/reports/src/styles.scss"],
         "scripts": [],
         "customWebpackConfig": {
           "path": "apps/reports/webpack.config.ts"

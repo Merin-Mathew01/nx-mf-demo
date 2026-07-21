@@ -8,32 +8,27 @@
         </p>
 
         <div class="upload-area">
-
-            <h3>Drag & Drop your file here</h3>
-
-            <span>or</span>
-
-            <input type="file" id="fileInput" hidden (change)="onFileSelected($event)" accept=".xls,xlxs" />
+            <input type="file" id="fileInput" hidden (change)="onFileSelected($event)" accept=".xls,.xlsx" />
 
             <label for="fileInput" class="browse-btn">
                 Browse Files
             </label>
 
             <p class="file-types">
-                DOCX,xls,xlxs Max 25 MB
+                DOCX,xls,xlsx Max 25 MB
             </p>
         </div>
         @if(selectedFile){
-            <div class="selected-file">
-                <div>
-                    <strong>{{ selectedFile.name }}</strong>
-                    <small>{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</small>
-                </div>
-
-                <button class="remove-btn" (click)="removeFile()">
-                    ✕
-                </button>
+        <div class="selected-file">
+            <div>
+                <strong>{{ selectedFile.name }}</strong>
+                <small>{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</small>
             </div>
+
+            <button class="remove-btn" (click)="removeFile()">
+                ✕
+            </button>
+        </div>
         }
 
 
@@ -42,6 +37,17 @@
         </button>
 
     </div>
+</div>
+<div class="grid-container">
+    @if(gridData().length>0){
+    <kendo-grid [data]="gridData()">
+        @for (data of columns(); track $index) {
+        <kendo-grid-column [headerStyle]="{ 'background-color': '#666' ,'color':'white'}" field="{{ data }}"
+            title="{{ data}}">
+        </kendo-grid-column>
+        }
+    </kendo-grid>
+    }
 </div>
 
 
