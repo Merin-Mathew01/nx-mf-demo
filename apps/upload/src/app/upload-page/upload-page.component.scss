@@ -133,12 +133,18 @@
 }
 
 .grid-container {
-  width: 90%;
-  margin: 30px;
-  
-
+padding: 40px;
 }
 
 kendo-grid {
   width: 100%;
+}
+
+#savebtn{
+  padding: 10px 20px;
+  background-color: #1d4ed8;
+  color: white;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
 }

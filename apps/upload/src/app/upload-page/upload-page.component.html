@@ -40,15 +40,27 @@
 </div>
 <div class="grid-container">
     @if(gridData().length>0){
-    <kendo-grid [data]="gridData()">
-        @for (data of columns(); track $index) {
-        <kendo-grid-column [headerStyle]="{ 'background-color': '#666' ,'color':'white'}" field="{{ data }}"
-            title="{{ data}}">
-        </kendo-grid-column>
+    <kendo-grid [kendoGridBinding]="gridData()" [kendoGridInCellEditing]="createFormGroup" [pageSize]="20" [pageable]="true" (cellClose)="cellCloseHandler($event)">
+        @for(group of columnGroups; track $index){
+        <kendo-grid-column-group [title]="group.title" [headerStyle]="{'background-color': group.groupColor,'color': 'white'}">
+            @for (col of group.columns; track $index) {
+            <kendo-grid-column [headerStyle]="{ 'background-color': group.columnColor ,'color':'black'}" [field]="col" [title]="col">
+                <ng-template kendoGridEditTemplate let-formGroup="formGroup">
+                    @if(col == 'Verified' || col == 'Approved' || col == 'Reviewed'){
+                        <kendo-dropdownlist [data]="yesNoOptions"  [formControl]="formGroup.get(col)" style="background-color: darkgray;">
+                        </kendo-dropdownlist>
+                    }@else{
+                        <input kendoTextBox [formControl]="formGroup.get(col)"/>
+                    }
+                </ng-template>
+            </kendo-grid-column>
+            }
+        </kendo-grid-column-group>
         }
     </kendo-grid>
+    <button id="savebtn" type="submit" (click)="saveData()">Save</button>
     }
+    
 </div>
-
 
 <lib-footer></lib-footer>

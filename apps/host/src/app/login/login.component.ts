@@ -30,8 +30,12 @@ export class LoginComponent {
     if(this.loginForm.valid){
       this.api.loginAPI(this.loginForm.value).subscribe({
         next:((res:any)=>{
+          console.log(res);
+          
           const username = this.loginForm.value.username
           sessionStorage.setItem('username',username)
+          const token = res.token
+          sessionStorage.setItem('token',token)
           alert(res.message)
           this.route.navigateByUrl('/dashboard')
         }),
@@ -45,9 +49,5 @@ export class LoginComponent {
   }
 
 
-  logout(){
-    sessionStorage.clear()
-    this.route.navigateByUrl('/')
-  }
-
+  
 }

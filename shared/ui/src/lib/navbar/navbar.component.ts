@@ -16,4 +16,6 @@ export class NavbarComponent {
   ngOnInit() {
     this.username = sessionStorage.getItem('username') || ''
   }
+
+  
 }
