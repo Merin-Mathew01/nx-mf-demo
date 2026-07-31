@@ -15,6 +15,35 @@
       </div>
     </div>
   </section>
+  <div class="uploaded-files-section">
 
+  <h2>Uploaded Files</h2>
+
+  <div class="file-container">
+
+    @for(file of documents; track file.documentId) {
+
+      <div class="file-card">
+
+        
+
+        <h3>{{file.fileName}}</h3>
+
+        <p>
+          Uploaded:
+          {{file.updatedAtUtc}}
+        </p>
+
+        <button (click)="openFile(file)">
+          Edit File
+        </button>
+
+      </div>
+
+    }
+
+  </div>
+
+</div>
   <lib-footer></lib-footer>
 </div>

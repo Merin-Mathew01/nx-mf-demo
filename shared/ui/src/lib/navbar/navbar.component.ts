@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'lib-navbar',
@@ -12,10 +12,14 @@ import { RouterLink } from '@angular/router';
 export class NavbarComponent {
    // to store and display user details
   username = ""
+  route = inject(Router)
 
   ngOnInit() {
     this.username = sessionStorage.getItem('username') || ''
   }
 
-  
+  logout(){
+    sessionStorage.clear()
+    this.route.navigateByUrl('/')
+  }
 }

@@ -148,3 +148,61 @@ kendo-grid {
   border: none;
   font-size: 14px;
 }
+
+.row-actions {
+    display: none;
+    button{
+      background-color: #1d4ed8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+    }
+}
+
+:host ::ng-deep .k-grid tr:hover .row-actions {
+    display: block;
+}
+:host ::ng-deep .editing-row td{
+    background-color:#fff4b2  !important;
+}
+
+.locked-user {
+  color: #d97706;
+  font-weight: 600;
+}
+
+.save-btn {
+  background-color: #16a34a !important;
+  color: white !important;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-right: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.save-btn:hover {
+  background-color: #15803d !important;
+}
+
+.cancel-btn {
+  background-color: #dc2626 !important;
+  color: white !important;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #b91c1c !important;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

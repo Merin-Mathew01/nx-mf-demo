@@ -40,27 +40,86 @@
 </div>
 <div class="grid-container">
     @if(gridData().length>0){
-    <kendo-grid [kendoGridBinding]="gridData()" [kendoGridInCellEditing]="createFormGroup" [pageSize]="20" [pageable]="true" (cellClose)="cellCloseHandler($event)">
+    <kendo-grid #grid [kendoGridBinding]="gridData()"  [pageSize]="20"
+        [pageable]="true"  [rowClass]="rowClass">
         @for(group of columnGroups; track $index){
-        <kendo-grid-column-group [title]="group.title" [headerStyle]="{'background-color': group.groupColor,'color': 'white'}">
+
+        <kendo-grid-column-group [title]="group.title"
+            [headerStyle]="{'background-color': group.groupColor,'color':'white'}">
+
             @for (col of group.columns; track $index) {
-            <kendo-grid-column [headerStyle]="{ 'background-color': group.columnColor ,'color':'black'}" [field]="col" [title]="col">
+
+            <kendo-grid-column [headerStyle]="{ 
+                    'background-color': group.columnColor,
+                    'color':'black'
+                }" [field]="col" [title]="col">
+
                 <ng-template kendoGridEditTemplate let-formGroup="formGroup">
+
                     @if(col == 'Verified' || col == 'Approved' || col == 'Reviewed'){
-                        <kendo-dropdownlist [data]="yesNoOptions"  [formControl]="formGroup.get(col)" style="background-color: darkgray;">
-                        </kendo-dropdownlist>
+
+                    <kendo-dropdownlist [data]="yesNoOptions" [formControl]="formGroup.get(col)">
+                    </kendo-dropdownlist>
+
                     }@else{
-                        <input kendoTextBox [formControl]="formGroup.get(col)"/>
+
+                    <input kendoTextBox [formControl]="formGroup.get(col)" />
+
                     }
+
                 </ng-template>
+
             </kendo-grid-column>
+
             }
+
         </kendo-grid-column-group>
+
         }
+
+
+        <!-- Action column should be here -->
+        <kendo-grid-column title="Actions" [width]="180">
+
+            <ng-template kendoGridCellTemplate let-dataItem="dataItem" let-rowIndex="rowIndex">
+
+                @if (isEditedByMe(dataItem)) {
+                <div class="action-buttons">
+                    <button kendoButton (click)="saveRow(dataItem, rowIndex)" class="save-btn">
+                        Save
+                    </button>
+
+                    <button kendoButton (click)="grid.closeRow(rowIndex)" class="cancel-btn">
+                        Cancel
+                    </button>
+                </div>
+
+
+                } @else if (isLockedByOther(dataItem)) {
+
+                <span class="locked-user">
+                    Editing: {{ getEditingUser(dataItem).userName }}
+                </span>
+
+                } @else {
+
+                <div class="row-actions">
+
+                    <button kendoButton (click)="editRow(dataItem, rowIndex)">
+                        Edit
+                    </button>
+
+                </div>
+
+                }
+
+            </ng-template>
+
+        </kendo-grid-column>
     </kendo-grid>
     <button id="savebtn" type="submit" (click)="saveData()">Save</button>
     }
-    
+
 </div>
 
 <lib-footer></lib-footer>

@@ -1,7 +1,57 @@
-<div class="dashboard-container">
+<div class="report-container">
   <lib-navbar></lib-navbar>
+  <div class="grid-container">
+    <h1>Reports</h1>
+    @if(gridData().length>0){
+    <kendo-grid [kendoGridBinding]="gridData()" [pageSize]="10" [pageable]="true">
+      <ng-template kendoGridToolbarTemplate>
+        <button id="excel" type="button" kendoGridExcelCommand [svgIcon]="fileExcelIcon">Export to Excel</button>
+      </ng-template>
+      @for(group of columnGroups; track $index){
+      <kendo-grid-column-group [title]="group.title"
+        [headerStyle]="{'background-color': group.groupColor,'color': 'white'}">
+        @for (col of group.columns; track $index) {
+        <kendo-grid-column [headerStyle]="{ 'background-color': group.columnColor ,'color':'black'}" [field]="col" [title]="col">
 
-  
+        </kendo-grid-column>
+        }
+      </kendo-grid-column-group>
+      }
+      <kendo-grid-excel fileName="data.xlsx" [fetchData]="allData"></kendo-grid-excel>
+    </kendo-grid>
+    }
+  </div>
+  <h1>Chart view</h1>
+  <kendo-chart>
+  <kendo-chart-title text="Alarm Status"></kendo-chart-title>
+
+  <kendo-chart-series>
+    <kendo-chart-series-item
+      type="donut"
+      [data]="statusChartData"
+      field="value"
+      categoryField="category">
+    </kendo-chart-series-item>
+  </kendo-chart-series>
+</kendo-chart>
+
+<kendo-chart>
+  <kendo-chart-title text="Department-wise Alarms"></kendo-chart-title>
+
+  <kendo-chart-category-axis>
+    <kendo-chart-category-axis-item
+      [categories]="departmentCategories">
+    </kendo-chart-category-axis-item>
+  </kendo-chart-category-axis>
+
+  <kendo-chart-series>
+    <kendo-chart-series-item
+      type="column"
+      [data]="departmentValues"
+      name="Alarms">
+    </kendo-chart-series-item>
+  </kendo-chart-series>
+</kendo-chart>
 
   <lib-footer></lib-footer>
 </div>
