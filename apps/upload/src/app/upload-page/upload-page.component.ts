@@ -8,6 +8,7 @@ import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { Router } from '@angular/router';
 import { switchMap, timer } from 'rxjs';
 import { PopupModule } from '@progress/kendo-angular-popup';
+// import { SignalrService } from '@nx-demo/shared/data-access'
 
 
 
@@ -24,6 +25,8 @@ export class UploadPageComponent {
 
   selectedFile: File | null = null;
   api = inject(ApiService)
+  // signalr = inject(SignalrService)
+
 
   gridData = signal<any[]>([])
   columns = signal<any[]>([])
@@ -128,6 +131,12 @@ export class UploadPageComponent {
     if (id) {
       this.docId = id;
       this.getExcelData();
+
+    //   this.signalr.startConnection()
+    // .then(() => {
+    //   console.log('SignalR Connected');
+    // })
+    // .catch(err => console.error(err));
     }
 
     timer(0, 10000)
