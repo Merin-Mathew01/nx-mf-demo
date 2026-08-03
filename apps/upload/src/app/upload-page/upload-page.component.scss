@@ -206,3 +206,31 @@ kendo-grid {
   gap: 8px;
   align-items: center;
 }
+
+.popup-panel {
+
+    background: white;
+
+    border-radius: 10px;
+
+    padding: 8px;
+
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+
+}
+
+.row-actions,
+.action-buttons {
+
+    display: flex;
+    gap: 8px;
+
+}
+
+.locked-user {
+
+    padding: 6px 10px;
+    font-weight: 500;
+    white-space: nowrap;
+
+}

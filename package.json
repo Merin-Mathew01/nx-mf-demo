@@ -18,6 +18,8 @@
     "@progress/kendo-angular-charts": "^20.1.2",
     "@progress/kendo-angular-dropdowns": "^20.1.2",
     "@progress/kendo-angular-grid": "^20.1.2",
+    "@progress/kendo-angular-popup": "^20.1.2",
+    "@progress/kendo-angular-tooltip": "^20.1.2",
     "@progress/kendo-theme-default": "^14.3.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

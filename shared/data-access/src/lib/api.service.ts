@@ -8,8 +8,8 @@ export class ApiService {
 
   http = inject(HttpClient)
   // server_url="http://10.15.51.152:5002/api"
-  server_url="http://10.15.51.152:5284/api"
-  // server_url="http://10.15.51.144:5284/api"
+  // server_url="http://10.15.51.152:5284/api"
+  server_url="http://10.15.51.144:5884/api"
 
 // login api
 loginAPI(body:any){
@@ -83,5 +83,18 @@ saveRow(documentId: string,sheetIndex: number,rowIndex: number,data:any) {
         Authorization: `Bearer ${token}`
       }}
   );
+}
+
+cancelRow(documentId: string, sheetIndex: number, rowIndex: number) {
+  const token = sessionStorage.getItem('token');
+  return this.http.post(
+    `${this.server_url}/excel-documents/${documentId}/sheets/${sheetIndex}/rows/${rowIndex}/cancel`,{},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
+
 }
 }

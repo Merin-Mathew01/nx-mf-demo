@@ -7,13 +7,14 @@ import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } 
 import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { Router } from '@angular/router';
 import { switchMap, timer } from 'rxjs';
+import { PopupModule } from '@progress/kendo-angular-popup';
 
 
 
 @Component({
   selector: 'app-upload-page',
   standalone: true,
-  imports: [CommonModule, NavbarComponent, FooterComponent, KENDO_GRID, ReactiveFormsModule, DropDownsModule],
+  imports: [CommonModule, NavbarComponent, FooterComponent, KENDO_GRID, ReactiveFormsModule, DropDownsModule, PopupModule],
   templateUrl: './upload-page.component.html',
   styleUrl: './upload-page.component.scss',
 })
@@ -106,6 +107,19 @@ export class UploadPageComponent {
   yesNoOptions = ['--Select--', 'Yes', 'No']
 
   currentUser = sessionStorage.getItem('username');
+
+
+
+  showPopup = false;
+
+  popupAnchor!: HTMLElement;
+
+  hoveredRow: any = null;
+
+  hoveredGridRow = -1;
+
+  hideTimer: any;
+
 
   ngOnInit() {
 
@@ -200,7 +214,7 @@ export class UploadPageComponent {
     })
   }
 
-  
+
 
   saveData() {
     const rows = this.gridData().map((row: any) => {
@@ -274,6 +288,11 @@ export class UploadPageComponent {
 
         this.grid.editRow(gridRowIndex, this.editFormGroup);
 
+        // Refresh editing rows immediately
+        this.api.getEditing(this.docId).subscribe((result: any) => {
+          this.editingRows = result.editingRows;
+        });
+
       },
 
       error: err => {
@@ -300,6 +319,9 @@ export class UploadPageComponent {
   };
 
   isEditedByMe(row: any): boolean {
+    console.log('Checking row:', row.rowIndex);
+
+  console.log(this.editingRows);
 
     return this.editingRows.some((x: any) =>
       x.sheetIndex === this.sheetIndex &&
@@ -331,19 +353,19 @@ export class UploadPageComponent {
 
     const updatedRow = this.editFormGroup.value
     console.log(updatedRow);
-    
+
 
     const { rowIndex, ...rowData } = updatedRow;
 
     const reqBody = { data: rowData };
     console.log(reqBody);
-    
+
 
     this.api.saveRow(this.docId, this.sheetIndex, rowIndex, reqBody).subscribe({
 
-      next: (res:any) => {
+      next: (res: any) => {
         console.log(res);
-        
+
         alert("Row saved successfully.");
 
         this.grid.closeRow(gridRowIndex);
@@ -363,6 +385,72 @@ export class UploadPageComponent {
     });
 
   }
+
+  cancelEdit(dataItem: any, gridRowIndex: number) {
+
+    this.api.cancelRow(this.docId, this.sheetIndex, dataItem.rowIndex).subscribe({
+
+      next: () => {
+
+        // Close Kendo edit mode
+        this.grid.closeRow(gridRowIndex);
+
+        // Clear your editing state
+        this.editableRow = null;
+
+        // Refresh editing locks
+        this.api.getEditing(this.docId).subscribe((result: any) => {
+          this.editingRows = result.editingRows;
+        });
+
+      },
+
+      error: (err) => {
+
+        console.error(err);
+
+        alert("Unable to cancel editing.");
+
+      }
+
+    });
+
+  }
+
+  showRowActions(
+    event: MouseEvent,
+    dataItem: any,
+    rowIndex: number
+  ) {
+    clearTimeout(this.hideTimer);
+
+    // Anchor to the TD element instead of the inner DIV
+    this.popupAnchor = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
+
+    this.hoveredRow = dataItem;
+    this.hoveredGridRow = rowIndex;
+
+    this.showPopup = true;
+
+    console.log('Popup anchor:', this.popupAnchor);
+  }
+
+  hideRowActions() {
+
+    this.hideTimer = setTimeout(() => {
+
+      this.showPopup = false;
+
+    }, 200);
+
+  }
+
+  keepPopupOpen() {
+
+    clearTimeout(this.hideTimer);
+
+  }
+
 }
 
 
