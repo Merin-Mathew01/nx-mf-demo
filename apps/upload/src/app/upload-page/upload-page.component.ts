@@ -8,7 +8,7 @@ import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { Router } from '@angular/router';
 import { switchMap, timer } from 'rxjs';
 import { PopupModule } from '@progress/kendo-angular-popup';
-// import { SignalrService } from '@nx-demo/shared/data-access'
+import { SignalrService } from '@nx-demo/shared/data-access'
 
 
 
@@ -25,7 +25,7 @@ export class UploadPageComponent {
 
   selectedFile: File | null = null;
   api = inject(ApiService)
-  // signalr = inject(SignalrService)
+  signalr = inject(SignalrService)
 
 
   gridData = signal<any[]>([])
@@ -36,9 +36,10 @@ export class UploadPageComponent {
   sheetIndex!: number;
 
   editableRow: number | null = null;
-  editingRows: any[] = [];
+  editingRows = signal<any[]>([]);
   hoveredRowIndex: number | null = null;
   editFormGroup!: FormGroup;
+
 
   route = inject(Router)
 
@@ -123,6 +124,8 @@ export class UploadPageComponent {
 
   hideTimer: any;
 
+  popupPinned = false;
+
 
   ngOnInit() {
 
@@ -131,28 +134,23 @@ export class UploadPageComponent {
     if (id) {
       this.docId = id;
       this.getExcelData();
-
-    //   this.signalr.startConnection()
-    // .then(() => {
-    //   console.log('SignalR Connected');
-    // })
-    // .catch(err => console.error(err));
+      this.initializeSignalR()
     }
 
-    timer(0, 10000)
-      .pipe(
-        switchMap(() =>
-          this.api.getEditing(this.docId)
-        )
-      )
-      .subscribe((result: any) => {
+    // timer(0, 10000)
+    //   .pipe(
+    //     switchMap(() =>
+    //       this.api.getEditing(this.docId)
+    //     )
+    //   )
+    //   .subscribe((result: any) => {
 
-        this.editingRows = result.editingRows;
+    //     this.editingRows.set(result.editingRows);
 
-        console.log(this.editingRows);
+    //     console.log(this.editingRows());
 
 
-      });
+    //   });
 
 
   }
@@ -287,6 +285,7 @@ export class UploadPageComponent {
 
     this.api.editRow(this.docId, this.sheetIndex, data.rowIndex).subscribe({
       next: () => {
+        this.popupPinned = true;
 
         this.editableRow = data.rowIndex;
 
@@ -296,10 +295,28 @@ export class UploadPageComponent {
         } as CreateFormGroupArgs);
 
         this.grid.editRow(gridRowIndex, this.editFormGroup);
+        setTimeout(() => {
+
+          const cell = document.querySelector(
+            `.k-grid tbody tr:nth-child(${gridRowIndex + 1}) td`
+          ) as HTMLElement;
+
+          if (cell) {
+            this.popupAnchor = cell;
+            this.showPopup = false;
+
+            setTimeout(() => {
+              this.showPopup = true;
+            });
+          }
+
+        });
 
         // Refresh editing rows immediately
         this.api.getEditing(this.docId).subscribe((result: any) => {
-          this.editingRows = result.editingRows;
+          this.editingRows.set(result.editingRows);
+          // console.log('editingRows:', this.editingRows);
+          // console.log('isEditedByMe:', this.isEditedByMe(this.hoveredRow));
         });
 
       },
@@ -319,7 +336,7 @@ export class UploadPageComponent {
   public rowClass = (args: RowClassArgs) => {
 
     return {
-      'editing-row': this.editingRows.some((x: any) =>
+      'editing-row': this.editingRows().some((x: any) =>
         x.sheetIndex === this.sheetIndex &&
         x.rowIndex === args.dataItem.rowIndex
       )
@@ -327,22 +344,44 @@ export class UploadPageComponent {
 
   };
 
+  // isEditedByMe(row: any): boolean {
+  //   console.log('Checking row:', row.rowIndex);
+
+  //   console.log(this.editingRows);
+
+  //   return this.editingRows.some((x: any) =>
+  //     x.sheetIndex === this.sheetIndex &&
+  //     x.rowIndex === row.rowIndex &&
+  //     x.userName.toLowerCase() === this.currentUser?.toLowerCase()
+  //   );
+
+  // }
+
   isEditedByMe(row: any): boolean {
-    console.log('Checking row:', row.rowIndex);
 
-  console.log(this.editingRows);
+    // console.log("Current User:", this.currentUser);
+    // console.log("Hovered Row:", row);
+    // console.log("Editing Rows:", this.editingRows());
 
-    return this.editingRows.some((x: any) =>
-      x.sheetIndex === this.sheetIndex &&
-      x.rowIndex === row.rowIndex &&
-      x.userName.toLowerCase() === this.currentUser?.toLowerCase()
-    );
+    const result = this.editingRows().some((x: any) => {
+      const match =
+        x.sheetIndex === this.sheetIndex &&
+        x.rowIndex === row.rowIndex &&
+        x.userName.toLowerCase() === this.currentUser?.toLowerCase();
 
+      // console.log("Match:", match);
+
+      return match;
+    });
+
+    // console.log("Final Result:", result);
+
+    return result;
   }
 
   getEditingUser(row: any) {
 
-    return this.editingRows.find((x: any) =>
+    return this.editingRows().find((x: any) =>
       x.sheetIndex === this.sheetIndex &&
       x.rowIndex === row.rowIndex
     );
@@ -378,6 +417,10 @@ export class UploadPageComponent {
         alert("Row saved successfully.");
 
         this.grid.closeRow(gridRowIndex);
+        this.popupPinned = false;
+        this.showPopup = false;
+        this.editableRow = null;
+
 
         this.getExcelData();
 
@@ -405,11 +448,13 @@ export class UploadPageComponent {
         this.grid.closeRow(gridRowIndex);
 
         // Clear your editing state
+        this.popupPinned = false;
+        this.showPopup = false;
         this.editableRow = null;
 
         // Refresh editing locks
         this.api.getEditing(this.docId).subscribe((result: any) => {
-          this.editingRows = result.editingRows;
+          this.editingRows.set(result.editingRows);
         });
 
       },
@@ -426,25 +471,44 @@ export class UploadPageComponent {
 
   }
 
-  showRowActions(
-    event: MouseEvent,
-    dataItem: any,
-    rowIndex: number
-  ) {
-    clearTimeout(this.hideTimer);
+  // showRowActions(
+  //   event: MouseEvent,
+  //   dataItem: any,
+  //   rowIndex: number
+  // ) {
+  //   clearTimeout(this.hideTimer);
 
-    // Anchor to the TD element instead of the inner DIV
-    this.popupAnchor = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
+  //   // Anchor to the TD element instead of the inner DIV
+  //   this.popupAnchor = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
 
-    this.hoveredRow = dataItem;
-    this.hoveredGridRow = rowIndex;
+  //   this.hoveredRow = dataItem;
+  //   this.hoveredGridRow = rowIndex;
 
-    this.showPopup = true;
+  //   this.showPopup = true;
 
-    console.log('Popup anchor:', this.popupAnchor);
+  //   // console.log('Popup anchor:', this.popupAnchor);
+  // }
+
+  showRowActions(event: MouseEvent, dataItem: any, rowIndex: number) {
+  if (this.isEditingAnyRow() && dataItem.rowIndex !== this.editableRow) {
+    return;
   }
 
+  clearTimeout(this.hideTimer);
+
+  // Anchor to the whole row, not the individual cell
+  this.popupAnchor = (event.currentTarget as HTMLElement).closest('tr') as HTMLElement;
+
+  this.hoveredRow = dataItem;
+  this.hoveredGridRow = rowIndex;
+  this.showPopup = true;
+}
+
   hideRowActions() {
+
+    if (this.popupPinned) {
+      return;
+    }
 
     this.hideTimer = setTimeout(() => {
 
@@ -457,6 +521,71 @@ export class UploadPageComponent {
   keepPopupOpen() {
 
     clearTimeout(this.hideTimer);
+
+  }
+
+  isEditingAnyRow(): boolean {
+    return this.editableRow !== null;
+  }
+
+  initializeSignalR() {
+
+    this.signalr.startConnection()
+      .then(() => {
+        console.log('SignalR Connected');
+        return this.signalr.joinDocument(this.docId);
+      })
+      .then(() => {
+        console.log('Joined document');
+
+        this.api.getEditing(this.docId).subscribe((result: any) => {
+
+          this.editingRows.set(result.editingRows);
+
+          console.log('Current Editors:', this.editingRows());
+
+          this.registerSignalREvents();
+
+        });
+
+      })
+      .catch(err => console.error(err));
+
+  }
+  registerSignalREvents() {
+
+    this.signalr.onRowLocked((data: any) => {
+
+      console.log('Row Locked:', data);
+
+      this.editingRows.update(rows => {
+
+        const exists = rows.some(r =>
+          r.sheetIndex === data.sheetIndex &&
+          r.rowIndex === data.rowIndex
+        );
+
+        if (exists) {
+          return rows;
+        }
+
+        return [...rows, data];
+      });
+
+    });
+
+    this.signalr.onRowUnlocked((data: any) => {
+
+      console.log('Row Unlocked:', data);
+
+      this.editingRows.update(rows =>
+        rows.filter(r =>
+          !(r.sheetIndex === data.sheetIndex &&
+            r.rowIndex === data.rowIndex)
+        )
+      );
+
+    });
 
   }
 

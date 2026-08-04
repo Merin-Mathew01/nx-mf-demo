@@ -161,11 +161,20 @@
             }
             @else if (isLockedByOther(hoveredRow)) {
 
-            <div class="locked-user">
+            <span class="locked-user">
 
-                Editing : {{ getEditingUser(hoveredRow).userName }}
+                Editing: {{ getEditingUser(hoveredRow).userName }}
 
-            </div>
+            </span>
+
+            }
+            @else if (isEditingAnyRow()) {
+
+            <span class="editing-note">
+
+                Finish editing the current row first
+
+            </span>
 
             }
             @else {
@@ -178,11 +187,11 @@
 
                 </button>
 
-                <button kendoButton>
+                <!-- <button kendoButton>
 
                     Delete
 
-                </button>
+                </button> -->
 
             </div>
 
