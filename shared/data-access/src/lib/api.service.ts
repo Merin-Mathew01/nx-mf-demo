@@ -9,7 +9,8 @@ export class ApiService {
   http = inject(HttpClient)
   // server_url="http://10.15.51.152:5002/api"
   // server_url="http://10.15.51.152:5284/api"
-  server_url="http://10.15.51.144:5884/api"
+  // server_url="http://10.15.51.144:5884/api"
+  server_url="http://10.15.51.144:5444/api"
 
 // login api
 loginAPI(body:any){
@@ -20,78 +21,78 @@ loginAPI(body:any){
 uploadExcelAPI(file:File){
   const formData = new FormData()
   formData.append('file',file)
-  const token = sessionStorage.getItem('token');
-  return this.http.post(`${this.server_url}/excel-documents/upload`,formData,{
+  const accessToken = sessionStorage.getItem('accessToken');
+  return this.http.post(`${this.server_url}/excel/upload`,formData,{
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }
     })
 }
 
 updateExceldata(documentId: string,editedData :any) {
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.post(
     `${this.server_url}/excel-documents/${documentId}/versions`,editedData,{
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }
     }
   );
 }
 
 getExceldata(documentId: string){
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.get(`${this.server_url}/excel-documents/${documentId}`,{
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }
     })
 }
 
 getAllUploadedDocuments(){
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.get(`${this.server_url}/excel-documents`,{
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }
     })
 }
 
 editRow(documentId: string,sheetIndex: number,rowIndex: number) {
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.post(`${this.server_url}/excel-documents/${documentId}/sheets/${sheetIndex}/rows/${rowIndex}/edit`,{},
     {headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }}
   );
 }
 
 
 getEditing(documentId: string){
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.get(`${this.server_url}/excel-documents/${documentId}/editing`,
     {headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }}
   );
 }
 
 saveRow(documentId: string,sheetIndex: number,rowIndex: number,data:any) {
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.post(`${this.server_url}/excel-documents/${documentId}/sheets/${sheetIndex}/rows/${rowIndex}/save`,data,
     {headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken}`
       }}
   );
 }
 
 cancelRow(documentId: string, sheetIndex: number, rowIndex: number) {
-  const token = sessionStorage.getItem('token');
+  const accessToken = sessionStorage.getItem('accessToken');
   return this.http.post(
     `${this.server_url}/excel-documents/${documentId}/sheets/${sheetIndex}/rows/${rowIndex}/cancel`,{},
     {
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${accessToken }`
       }
     }
   );

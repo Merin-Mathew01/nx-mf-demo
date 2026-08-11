@@ -34,8 +34,8 @@ export class LoginComponent {
           
           const username = this.loginForm.value.username
           sessionStorage.setItem('username',username)
-          const token = res.token
-          sessionStorage.setItem('token',token)
+          const accessToken = res.accessToken
+          sessionStorage.setItem('accessToken',accessToken)
           alert(res.message)
           this.route.navigateByUrl('/dashboard')
         }),

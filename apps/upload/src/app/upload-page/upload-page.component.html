@@ -64,9 +64,9 @@
 
                 </ng-template>
 
-                <ng-template kendoGridEditTemplate let-formGroup="formGroup">
-
-                    @if(col == 'Verified' || col == 'Approved' || col == 'Reviewed'){
+                <ng-template kendoGridEditTemplate let-formGroup="formGroup" let-rowIndex="rowIndex" let-dataItem="dataItem">
+                    <div class="grid-edit-cell" (mouseenter)="showRowActions($event,dataItem , rowIndex)" (mouseleave)="hideRowActions()">
+                        @if(col == 'Verified' || col == 'Approved' || col == 'Reviewed'){
 
                     <kendo-dropdownlist [data]="yesNoOptions" [formControl]="formGroup.get(col)">
                     </kendo-dropdownlist>
@@ -76,6 +76,9 @@
                     <input kendoTextBox [formControl]="formGroup.get(col)" />
 
                     }
+                    </div>
+
+                    
 
                 </ng-template>
 
@@ -127,7 +130,7 @@
 
         </kendo-grid-column> -->
     </kendo-grid>
-    @if (showPopup) {
+    @if (showPopup && popupAnchor) {
 
     <kendo-popup [anchor]="popupAnchor" [anchorAlign]="{
         horizontal:'center',
@@ -140,7 +143,7 @@
         <div class="popup-panel" (mouseenter)="keepPopupOpen()" (mouseleave)="hideRowActions()">
 
             <!-- Content goes here -->
-            @if (isEditedByMe(hoveredRow)) {
+            @if (hoveredRow && isEditedByMe(hoveredRow)) {
 
             <div class="action-buttons">
 
@@ -159,7 +162,7 @@
             </div>
 
             }
-            @else if (isLockedByOther(hoveredRow)) {
+            @else if (hoveredRow && isLockedByOther(hoveredRow)) {
 
             <span class="locked-user">
 
@@ -168,15 +171,7 @@
             </span>
 
             }
-            @else if (isEditingAnyRow()) {
-
-            <span class="editing-note">
-
-                Finish editing the current row first
-
-            </span>
-
-            }
+            
             @else {
 
             <div class="row-actions">

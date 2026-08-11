@@ -6,13 +6,16 @@ import * as signalR from '@microsoft/signalr';
 })
 export class SignalrService {
 
-   private hubConnection!: signalR.HubConnection;
+  private hubConnection!: signalR.HubConnection;
 
   startConnection() {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://10.15.51.144:5884/excelHub',{
-        accessTokenFactory: () => sessionStorage.getItem('token') ?? '',withCredentials: false
-      }) 
+      .withUrl('http://10.15.51.144:5444/excelHub', {
+        accessTokenFactory: () => sessionStorage.getItem('token') ?? '', withCredentials: false
+      })
+      // .withUrl('http://10.15.51.152:5284/excelHub',{
+      //   accessTokenFactory: () => sessionStorage.getItem('token') ?? '',withCredentials: false
+      // }) 
       .withAutomaticReconnect()
       .build();
 
@@ -20,7 +23,10 @@ export class SignalrService {
   }
 
   stopConnection() {
-    return this.hubConnection.stop();
+    if (this.hubConnection && this.hubConnection.state !== signalR.HubConnectionState.Disconnected) {
+      return this.hubConnection.stop();
+    }
+    return Promise.resolve();
   }
 
   joinDocument(documentId: string) {
@@ -37,6 +43,11 @@ export class SignalrService {
 
   onRowUnlocked(callback: (data: any) => void) {
     this.hubConnection.on('RowUnlocked', callback);
+  }
+
+  removeListeners() {
+    this.hubConnection.off('RowLocked');
+    this.hubConnection.off('RowUnlocked');
   }
 }
 
