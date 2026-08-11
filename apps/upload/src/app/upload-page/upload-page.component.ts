@@ -7,13 +7,15 @@ import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } 
 import { DropDownsModule } from '@progress/kendo-angular-dropdowns';
 import { Router } from '@angular/router';
 import { switchMap, timer } from 'rxjs';
+import { PopupModule } from '@progress/kendo-angular-popup';
+import { SignalrService } from '@nx-demo/shared/data-access'
 
 
 
 @Component({
   selector: 'app-upload-page',
   standalone: true,
-  imports: [CommonModule, NavbarComponent, FooterComponent, KENDO_GRID, ReactiveFormsModule, DropDownsModule],
+  imports: [CommonModule, NavbarComponent, FooterComponent, KENDO_GRID, ReactiveFormsModule, DropDownsModule, PopupModule],
   templateUrl: './upload-page.component.html',
   styleUrl: './upload-page.component.scss',
 })
@@ -23,6 +25,8 @@ export class UploadPageComponent {
 
   selectedFile: File | null = null;
   api = inject(ApiService)
+  signalr = inject(SignalrService)
+
 
   gridData = signal<any[]>([])
   columns = signal<any[]>([])
@@ -32,9 +36,10 @@ export class UploadPageComponent {
   sheetIndex!: number;
 
   editableRow: number | null = null;
-  editingRows: any[] = [];
+  editingRows = signal<any[]>([]);
   hoveredRowIndex: number | null = null;
   editFormGroup!: FormGroup;
+
 
   route = inject(Router)
 
@@ -107,31 +112,58 @@ export class UploadPageComponent {
 
   currentUser = sessionStorage.getItem('username');
 
+
+
+  showPopup = false;
+
+  popupAnchor!: HTMLElement;
+
+  hoveredRow: any = null;
+
+  hoveredGridRow = -1;
+
+  hideTimer: any;
+
+  // popupPinned = false;
+  hoveredColIndex: number | null = null;
+
+
   ngOnInit() {
 
     const id = sessionStorage.getItem('docId');
 
     if (id) {
       this.docId = id;
-      this.getExcelData();
+      this.getExcelData(() => this.initializeSignalR())
     }
 
-    timer(0, 10000)
-      .pipe(
-        switchMap(() =>
-          this.api.getEditing(this.docId)
-        )
-      )
-      .subscribe((result: any) => {
+    // timer(0, 10000)
+    //   .pipe(
+    //     switchMap(() =>
+    //       this.api.getEditing(this.docId)
+    //     )
+    //   )
+    //   .subscribe((result: any) => {
 
-        this.editingRows = result.editingRows;
+    //     this.editingRows.set(result.editingRows);
 
-        console.log(this.editingRows);
-
-
-      });
+    //     console.log(this.editingRows());
 
 
+    //   });
+
+
+  }
+
+  ngOnDestroy() {
+
+    if (this.docId) {
+      this.signalr.leaveDocument(this.docId)
+        .catch(err => console.error(err));
+    }
+    this.signalr.removeListeners();
+    this.signalr.stopConnection()
+      .catch(err => console.error(err));
   }
 
   createFormGroup = (args: CreateFormGroupArgs): FormGroup => {
@@ -200,7 +232,7 @@ export class UploadPageComponent {
     })
   }
 
-  
+
 
   saveData() {
     const rows = this.gridData().map((row: any) => {
@@ -229,7 +261,7 @@ export class UploadPageComponent {
     })
   }
 
-  getExcelData() {
+  getExcelData(onComplete?: () => void) {
     this.api.getExceldata(this.docId).subscribe({
       next: (res: any) => {
         console.log(res);
@@ -252,6 +284,7 @@ export class UploadPageComponent {
 
 
         }
+        onComplete?.();
       },
       error: (err) => {
         console.error(err);
@@ -260,38 +293,92 @@ export class UploadPageComponent {
 
   }
 
+  // editRow(data: any, gridRowIndex: number) {
+
+  //   this.api.editRow(this.docId, this.sheetIndex, data.rowIndex).subscribe({
+  //     next: () => {
+  //       this.popupPinned = true;
+
+  //       this.editableRow = data.rowIndex;
+
+  //       this.editFormGroup = this.createFormGroup({
+  //         dataItem: data,
+  //         isNew: false
+  //       } as CreateFormGroupArgs);
+
+
+  //       this.grid.editRow(gridRowIndex, this.editFormGroup);
+  //       setTimeout(() => {
+  //         const row = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr')[gridRowIndex];
+  //         const firstCell = row.querySelector('td');
+
+  //         if (firstCell) {
+  //           this.popupAnchor = firstCell;
+  //         }
+  //       });
+
+
+  //       // Refresh editing rows immediately
+  //       this.api.getEditing(this.docId).subscribe((result: any) => {
+  //         this.editingRows.set(result.editingRows);
+  //         // console.log('editingRows:', this.editingRows);
+  //         // console.log('isEditedByMe:', this.isEditedByMe(this.hoveredRow));
+  //       });
+
+  //     },
+
+  //     error: err => {
+
+  //       alert("This row is already being edited.");
+  //       console.log(err);
+
+
+  //     }
+
+  //   });
+
+  // }
+
   editRow(data: any, gridRowIndex: number) {
+  this.api.editRow(this.docId, this.sheetIndex, data.rowIndex).subscribe({
+    next: () => {
+      // this.popupPinned = true;
+      this.editableRow = data.rowIndex;
+      this.editFormGroup = this.createFormGroup({
+        dataItem: data,
+        isNew: false
+      } as CreateFormGroupArgs);
 
-    this.api.editRow(this.docId, this.sheetIndex, data.rowIndex).subscribe({
-      next: () => {
+      this.grid.editRow(gridRowIndex, this.editFormGroup);
 
-        this.editableRow = data.rowIndex;
+      // wait for Kendo to re-render this row in edit-template mode,
+      // then re-anchor the popup to the SAME cell position (now a fresh DOM node)
+      setTimeout(() => {
+        const tbodyRows = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr');
+        const row = tbodyRows[gridRowIndex];
+        if (row && this.hoveredColIndex !== null) {
+          const cell = row.children[this.hoveredColIndex] as HTMLElement;
+          if (cell) {
+            this.popupAnchor = cell;
+          }
+        }
+      });
 
-        this.editFormGroup = this.createFormGroup({
-          dataItem: data,
-          isNew: false
-        } as CreateFormGroupArgs);
-
-        this.grid.editRow(gridRowIndex, this.editFormGroup);
-
-      },
-
-      error: err => {
-
-        alert("This row is already being edited.");
-        console.log(err);
-
-
-      }
-
-    });
-
-  }
+      this.api.getEditing(this.docId).subscribe((result: any) => {
+        this.editingRows.set(result.editingRows);
+      });
+    },
+    error: err => {
+      alert("This row is already being edited.");
+      console.log(err);
+    }
+  });
+}
 
   public rowClass = (args: RowClassArgs) => {
 
     return {
-      'editing-row': this.editingRows.some((x: any) =>
+      'editing-row': this.editingRows().some((x: any) =>
         x.sheetIndex === this.sheetIndex &&
         x.rowIndex === args.dataItem.rowIndex
       )
@@ -299,19 +386,44 @@ export class UploadPageComponent {
 
   };
 
+  // isEditedByMe(row: any): boolean {
+  //   console.log('Checking row:', row.rowIndex);
+
+  //   console.log(this.editingRows);
+
+  //   return this.editingRows.some((x: any) =>
+  //     x.sheetIndex === this.sheetIndex &&
+  //     x.rowIndex === row.rowIndex &&
+  //     x.userName.toLowerCase() === this.currentUser?.toLowerCase()
+  //   );
+
+  // }
+
   isEditedByMe(row: any): boolean {
 
-    return this.editingRows.some((x: any) =>
-      x.sheetIndex === this.sheetIndex &&
-      x.rowIndex === row.rowIndex &&
-      x.userName.toLowerCase() === this.currentUser?.toLowerCase()
-    );
+    // console.log("Current User:", this.currentUser);
+    // console.log("Hovered Row:", row);
+    // console.log("Editing Rows:", this.editingRows());
 
+    const result = this.editingRows().some((x: any) => {
+      const match =
+        x.sheetIndex === this.sheetIndex &&
+        x.rowIndex === row.rowIndex &&
+        x.userName.toLowerCase() === this.currentUser?.toLowerCase();
+
+      // console.log("Match:", match);
+
+      return match;
+    });
+
+    // console.log("Final Result:", result);
+
+    return result;
   }
 
   getEditingUser(row: any) {
 
-    return this.editingRows.find((x: any) =>
+    return this.editingRows().find((x: any) =>
       x.sheetIndex === this.sheetIndex &&
       x.rowIndex === row.rowIndex
     );
@@ -331,22 +443,26 @@ export class UploadPageComponent {
 
     const updatedRow = this.editFormGroup.value
     console.log(updatedRow);
-    
+
 
     const { rowIndex, ...rowData } = updatedRow;
 
     const reqBody = { data: rowData };
     console.log(reqBody);
-    
+
 
     this.api.saveRow(this.docId, this.sheetIndex, rowIndex, reqBody).subscribe({
 
-      next: (res:any) => {
+      next: (res: any) => {
         console.log(res);
-        
+
         alert("Row saved successfully.");
 
         this.grid.closeRow(gridRowIndex);
+        // this.popupPinned = false;
+        this.showPopup = false;
+        this.editableRow = null;
+
 
         this.getExcelData();
 
@@ -363,6 +479,228 @@ export class UploadPageComponent {
     });
 
   }
+
+  cancelEdit(dataItem: any, gridRowIndex: number) {
+
+    this.api.cancelRow(this.docId, this.sheetIndex, dataItem.rowIndex).subscribe({
+
+      next: () => {
+
+        // Close Kendo edit mode
+        this.grid.closeRow(gridRowIndex);
+
+        // Clear your editing state
+        // this.popupPinned = false;
+        this.showPopup = false;
+        this.editableRow = null;
+
+        // Refresh editing locks
+        this.api.getEditing(this.docId).subscribe((result: any) => {
+          this.editingRows.set(result.editingRows);
+        });
+
+      },
+
+      error: (err) => {
+
+        console.error(err);
+
+        alert("Unable to cancel editing.");
+
+      }
+
+    });
+
+  }
+
+  // showRowActions(
+  //   event: MouseEvent,
+  //   dataItem: any,
+  //   rowIndex: number
+  // ) {
+
+  //   // If another row is being edited, don't show popup there
+  //   if (this.isEditingAnyRow() && !this.isEditedByMe(dataItem)) {
+  //     return;
+  //   }
+
+  //   clearTimeout(this.hideTimer);
+
+  //   // Anchor popup to the hovered cell
+  //   this.popupAnchor = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
+
+  //   this.hoveredRow = dataItem;
+  //   this.hoveredGridRow = rowIndex;
+
+  //   this.showPopup = true;
+  // }
+
+  showRowActions(event: MouseEvent, dataItem: any, rowIndex: number) {
+  
+  clearTimeout(this.hideTimer);
+
+  const cell = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
+  this.popupAnchor = cell;
+
+  // remember which column this was, so we can re-find it after edit-mode re-render
+  const row = cell?.closest('tr');
+  this.hoveredColIndex = row ? Array.from(row.children).indexOf(cell) : null;
+
+  this.hoveredRow = dataItem;
+  this.hoveredGridRow = rowIndex;
+  this.showPopup = true;
+}
+
+hideRowActions() {
+  // keep popup open only if the row I'm CURRENTLY hovering is the one I'm editing
+  if (this.hoveredRow && this.isEditedByMe(this.hoveredRow)) {
+    return;
+  }
+
+  this.hideTimer = setTimeout(() => {
+    this.showPopup = false;
+  }, 150);
+}
+
+  // hideRowActions() {
+
+  //   // Keep popup visible while editing
+  //   if (this.popupPinned) {
+  //     return;
+  //   }
+
+  //   this.hideTimer = setTimeout(() => {
+  //     this.showPopup = false;
+  //   }, 150);
+
+  // }
+
+  keepPopupOpen() {
+
+    clearTimeout(this.hideTimer);
+
+  }
+
+  isEditingAnyRow(): boolean {
+
+    return this.editingRows().some((x: any) =>
+      x.userName.toLowerCase() === this.currentUser?.toLowerCase()
+    );
+
+  }
+
+  initializeSignalR() {
+
+    this.signalr.startConnection()
+      .then(() => {
+        console.log('SignalR Connected');
+        return this.signalr.joinDocument(this.docId);
+      })
+      .then(() => {
+        console.log('Joined document');
+
+        this.api.getEditing(this.docId).subscribe((result: any) => {
+
+          this.editingRows.set(result.editingRows);
+
+          console.log('Current Editors:', this.editingRows());
+
+          this.registerSignalREvents();
+          this.restoreOwnEditState()
+
+        });
+
+      })
+      .catch(err => console.error(err));
+
+  }
+
+  restoreOwnEditState() {
+  const myLock = this.editingRows().find((x: any) =>
+    x.sheetIndex === this.sheetIndex &&
+    x.userName.toLowerCase() === this.currentUser?.toLowerCase()
+  );
+
+  if (!myLock) {
+    return;
+  }
+
+  setTimeout(() => {
+    const data = this.gridData();
+    const gridRowIndex = data.findIndex((r: any) => r.rowIndex === myLock.rowIndex);
+
+    if (gridRowIndex === -1) {
+      return;
+    }
+
+    const dataItem = data[gridRowIndex];
+
+    // this.popupPinned = true;
+    this.editableRow = dataItem.rowIndex;
+
+    this.editFormGroup = this.createFormGroup({
+      dataItem,
+      isNew: false
+    } as CreateFormGroupArgs);
+
+    this.grid.editRow(gridRowIndex, this.editFormGroup);
+
+    // wait for edit-template DOM to actually render before anchoring
+    setTimeout(() => {
+      const tbodyRows = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr');
+      const row = tbodyRows[gridRowIndex];
+
+      if (row) {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          this.popupAnchor = firstCell;
+        }
+      }
+
+      this.hoveredRow = dataItem;
+      this.hoveredGridRow = gridRowIndex;
+      this.showPopup = true;
+    });
+  });
+}
+
+  registerSignalREvents() {
+
+    this.signalr.onRowLocked((data: any) => {
+
+      console.log('Row Locked:', data);
+
+      this.editingRows.update(rows => {
+
+        const exists = rows.some(r =>
+          r.sheetIndex === data.sheetIndex &&
+          r.rowIndex === data.rowIndex
+        );
+
+        if (exists) {
+          return rows;
+        }
+
+        return [...rows, data];
+      });
+
+    });
+
+    this.signalr.onRowUnlocked((data: any) => {
+
+      console.log('Row Unlocked:', data);
+
+      this.editingRows.update(rows =>
+        rows.filter(r =>
+          !(r.sheetIndex === data.sheetIndex &&
+            r.rowIndex === data.rowIndex)
+        )
+      );
+
+    });
+
+  }
+
 }
 
 

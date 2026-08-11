@@ -40,8 +40,7 @@
 </div>
 <div class="grid-container">
     @if(gridData().length>0){
-    <kendo-grid #grid [kendoGridBinding]="gridData()"  [pageSize]="20"
-        [pageable]="true"  [rowClass]="rowClass">
+    <kendo-grid #grid [kendoGridBinding]="gridData()" [pageSize]="20" [pageable]="true" [rowClass]="rowClass">
         @for(group of columnGroups; track $index){
 
         <kendo-grid-column-group [title]="group.title"
@@ -53,10 +52,21 @@
                     'background-color': group.columnColor,
                     'color':'black'
                 }" [field]="col" [title]="col">
+                <!-- Normal Cell -->
+                <ng-template kendoGridCellTemplate let-dataItem="dataItem" let-rowIndex="rowIndex">
 
-                <ng-template kendoGridEditTemplate let-formGroup="formGroup">
+                    <div class="grid-cell" (mouseenter)="showRowActions($event, dataItem, rowIndex)"
+                        (mouseleave)="hideRowActions()">
 
-                    @if(col == 'Verified' || col == 'Approved' || col == 'Reviewed'){
+                        {{ dataItem[col] }}
+
+                    </div>
+
+                </ng-template>
+
+                <ng-template kendoGridEditTemplate let-formGroup="formGroup" let-rowIndex="rowIndex" let-dataItem="dataItem">
+                    <div class="grid-edit-cell" (mouseenter)="showRowActions($event,dataItem , rowIndex)" (mouseleave)="hideRowActions()">
+                        @if(col == 'Verified' || col == 'Approved' || col == 'Reviewed'){
 
                     <kendo-dropdownlist [data]="yesNoOptions" [formControl]="formGroup.get(col)">
                     </kendo-dropdownlist>
@@ -66,6 +76,9 @@
                     <input kendoTextBox [formControl]="formGroup.get(col)" />
 
                     }
+                    </div>
+
+                    
 
                 </ng-template>
 
@@ -79,7 +92,7 @@
 
 
         <!-- Action column should be here -->
-        <kendo-grid-column title="Actions" [width]="180">
+        <!-- <kendo-grid-column title="Actions" [width]="180">
 
             <ng-template kendoGridCellTemplate let-dataItem="dataItem" let-rowIndex="rowIndex">
 
@@ -89,7 +102,7 @@
                         Save
                     </button>
 
-                    <button kendoButton (click)="grid.closeRow(rowIndex)" class="cancel-btn">
+                    <button kendoButton (click)="cancelEdit(dataItem, rowIndex)" class="cancel-btn">
                         Cancel
                     </button>
                 </div>
@@ -115,8 +128,76 @@
 
             </ng-template>
 
-        </kendo-grid-column>
+        </kendo-grid-column> -->
     </kendo-grid>
+    @if (showPopup && popupAnchor) {
+
+    <kendo-popup [anchor]="popupAnchor" [anchorAlign]="{
+        horizontal:'center',
+        vertical:'top'
+    }" [popupAlign]="{
+        horizontal:'center',
+        vertical:'bottom'
+    }">
+
+        <div class="popup-panel" (mouseenter)="keepPopupOpen()" (mouseleave)="hideRowActions()">
+
+            <!-- Content goes here -->
+            @if (hoveredRow && isEditedByMe(hoveredRow)) {
+
+            <div class="action-buttons">
+
+                <button kendoButton class="save-btn" (click)="saveRow(hoveredRow, hoveredGridRow)">
+
+                    Save
+
+                </button>
+
+                <button kendoButton class="cancel-btn" (click)="cancelEdit(hoveredRow, hoveredGridRow)">
+
+                    Cancel
+
+                </button>
+
+            </div>
+
+            }
+            @else if (hoveredRow && isLockedByOther(hoveredRow)) {
+
+            <span class="locked-user">
+
+                Editing: {{ getEditingUser(hoveredRow).userName }}
+
+            </span>
+
+            }
+            
+            @else {
+
+            <div class="row-actions">
+
+                <button kendoButton (click)="editRow(hoveredRow, hoveredGridRow)">
+
+                    Edit
+
+                </button>
+
+                <!-- <button kendoButton>
+
+                    Delete
+
+                </button> -->
+
+            </div>
+
+            }
+
+        </div>
+
+    </kendo-popup>
+
+    }
+
     <button id="savebtn" type="submit" (click)="saveData()">Save</button>
     }
 
