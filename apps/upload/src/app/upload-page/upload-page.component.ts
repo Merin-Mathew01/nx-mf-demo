@@ -40,6 +40,8 @@ export class UploadPageComponent {
   hoveredRowIndex: number | null = null;
   editFormGroup!: FormGroup;
 
+  isLoading = signal(false)
+
 
   route = inject(Router)
 
@@ -111,7 +113,7 @@ export class UploadPageComponent {
   yesNoOptions = ['--Select--', 'Yes', 'No']
 
   currentUser = sessionStorage.getItem('username');
-
+  currentUserId = sessionStorage.getItem('currentUserId');
 
 
   showPopup = false;
@@ -126,6 +128,12 @@ export class UploadPageComponent {
 
   // popupPinned = false;
   hoveredColIndex: number | null = null;
+
+  documentVersion = signal<string>("");
+
+  pollingInterval: any = null;
+
+  connectionState = this.signalr.connectionState; 
 
 
   ngOnInit() {
@@ -156,6 +164,7 @@ export class UploadPageComponent {
   }
 
   ngOnDestroy() {
+    this.stopPolling()
 
     if (this.docId) {
       this.signalr.leaveDocument(this.docId)
@@ -200,6 +209,7 @@ export class UploadPageComponent {
       return;
     }
     console.log('Uploading:', this.selectedFile);
+    this.isLoading.set(true);
     this.api.uploadExcelAPI(this.selectedFile).subscribe({
       next: (res: any) => {
         console.log(res);
@@ -219,6 +229,7 @@ export class UploadPageComponent {
           Reviewed: 'No'
         }))
         this.gridData.set(updatedData)
+        this.isLoading.set(false);
         console.log(this.gridData());
         if (updatedData.length > 0) {
           this.columns.set(Object.keys(updatedData[0]))
@@ -228,6 +239,7 @@ export class UploadPageComponent {
         this.selectedFile = null;
       }, error: (reason) => {
         console.log(reason);
+        this.isLoading.set(false);
       }
     })
   }
@@ -262,12 +274,15 @@ export class UploadPageComponent {
   }
 
   getExcelData(onComplete?: () => void) {
+    this.isLoading.set(true);
     this.api.getExceldata(this.docId).subscribe({
       next: (res: any) => {
         console.log(res);
         const sheet = res.sheets[0];
         this.sheetName = sheet.sheetName;
         this.sheetIndex = sheet.sheetIndex;
+        this.documentVersion.set(res.versionNumber);
+
         const data = sheet.rows.map((row: any) => ({
           ...row.data,
           rowIndex: row.rowIndex,
@@ -277,6 +292,7 @@ export class UploadPageComponent {
         }));
 
         this.gridData.set(data);
+        this.isLoading.set(false);
 
         if (data.length) {
           this.columns.set(Object.keys(data[0]));
@@ -288,6 +304,7 @@ export class UploadPageComponent {
       },
       error: (err) => {
         console.error(err);
+        this.isLoading.set(false);
       }
     })
 
@@ -340,40 +357,40 @@ export class UploadPageComponent {
   // }
 
   editRow(data: any, gridRowIndex: number) {
-  this.api.editRow(this.docId, this.sheetIndex, data.rowIndex).subscribe({
-    next: () => {
-      // this.popupPinned = true;
-      this.editableRow = data.rowIndex;
-      this.editFormGroup = this.createFormGroup({
-        dataItem: data,
-        isNew: false
-      } as CreateFormGroupArgs);
+    this.api.editRow(this.docId, this.sheetIndex, data.rowIndex).subscribe({
+      next: () => {
+        // this.popupPinned = true;
+        this.editableRow = data.rowIndex;
+        this.editFormGroup = this.createFormGroup({
+          dataItem: data,
+          isNew: false
+        } as CreateFormGroupArgs);
 
-      this.grid.editRow(gridRowIndex, this.editFormGroup);
+        this.grid.editRow(gridRowIndex, this.editFormGroup);
 
-      // wait for Kendo to re-render this row in edit-template mode,
-      // then re-anchor the popup to the SAME cell position (now a fresh DOM node)
-      setTimeout(() => {
-        const tbodyRows = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr');
-        const row = tbodyRows[gridRowIndex];
-        if (row && this.hoveredColIndex !== null) {
-          const cell = row.children[this.hoveredColIndex] as HTMLElement;
-          if (cell) {
-            this.popupAnchor = cell;
+        // wait for Kendo to re-render this row in edit-template mode,
+        // then re-anchor the popup to the SAME cell position (now a fresh DOM node)
+        setTimeout(() => {
+          const tbodyRows = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr');
+          const row = tbodyRows[gridRowIndex];
+          if (row && this.hoveredColIndex !== null) {
+            const cell = row.children[this.hoveredColIndex] as HTMLElement;
+            if (cell) {
+              this.popupAnchor = cell;
+            }
           }
-        }
-      });
+        });
 
-      this.api.getEditing(this.docId).subscribe((result: any) => {
-        this.editingRows.set(result.editingRows);
-      });
-    },
-    error: err => {
-      alert("This row is already being edited.");
-      console.log(err);
-    }
-  });
-}
+        this.api.getEditing(this.docId).subscribe((result: any) => {
+          this.editingRows.set(result.editingRows);
+        });
+      },
+      error: err => {
+        alert("This row is already being edited.");
+        console.log(err);
+      }
+    });
+  }
 
   public rowClass = (args: RowClassArgs) => {
 
@@ -457,6 +474,9 @@ export class UploadPageComponent {
         console.log(res);
 
         alert("Row saved successfully.");
+        if (res.versionNumber != "") {
+          this.documentVersion.set(res.versionNumber);
+        }
 
         this.grid.closeRow(gridRowIndex);
         // this.popupPinned = false;
@@ -536,31 +556,31 @@ export class UploadPageComponent {
   // }
 
   showRowActions(event: MouseEvent, dataItem: any, rowIndex: number) {
-  
-  clearTimeout(this.hideTimer);
 
-  const cell = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
-  this.popupAnchor = cell;
+    clearTimeout(this.hideTimer);
 
-  // remember which column this was, so we can re-find it after edit-mode re-render
-  const row = cell?.closest('tr');
-  this.hoveredColIndex = row ? Array.from(row.children).indexOf(cell) : null;
+    const cell = (event.currentTarget as HTMLElement).closest('td') as HTMLElement;
+    this.popupAnchor = cell;
 
-  this.hoveredRow = dataItem;
-  this.hoveredGridRow = rowIndex;
-  this.showPopup = true;
-}
+    // remember which column this was, so we can re-find it after edit-mode re-render
+    const row = cell?.closest('tr');
+    this.hoveredColIndex = row ? Array.from(row.children).indexOf(cell) : null;
 
-hideRowActions() {
-  // keep popup open only if the row I'm CURRENTLY hovering is the one I'm editing
-  if (this.hoveredRow && this.isEditedByMe(this.hoveredRow)) {
-    return;
+    this.hoveredRow = dataItem;
+    this.hoveredGridRow = rowIndex;
+    this.showPopup = true;
   }
 
-  this.hideTimer = setTimeout(() => {
-    this.showPopup = false;
-  }, 150);
-}
+  hideRowActions() {
+    // keep popup open only if the row I'm CURRENTLY hovering is the one I'm editing
+    if (this.hoveredRow && this.isEditedByMe(this.hoveredRow)) {
+      return;
+    }
+
+    this.hideTimer = setTimeout(() => {
+      this.showPopup = false;
+    }, 150);
+  }
 
   // hideRowActions() {
 
@@ -611,58 +631,105 @@ hideRowActions() {
         });
 
       })
-      .catch(err => console.error(err));
+      .catch(err => {// item 7: initial connection failed — fall back to polling instead of dead-ending
+        console.error('SignalR failed to start, falling back to polling', err);
+        this.startPolling();
+      })
+
+    // item 3/4/5: react to reconnect lifecycle
+    this.signalr.onReconnecting(() => {
+      console.log('Reconnecting...');
+      this.startPolling(); // cover the gap while the socket is down
+    });
+
+    this.signalr.onReconnected(() => {
+      console.log('Reconnected — rejoining document and reconciling');
+      this.stopPolling();
+
+      this.signalr.joinDocument(this.docId)
+        .then(() => {
+          this.api.getEditing(this.docId).subscribe((result: any) => {
+            this.editingRows.set(result.editingRows);
+            this.restoreOwnEditState();
+          });
+        })
+        .catch(err => console.error('Failed to rejoin document after reconnect', err));
+    });
+
+    this.signalr.onClose(() => {
+      console.log('Connection permanently closed');
+      this.startPolling();
+    });
+
+  }
+
+  private startPolling() {
+    if (this.pollingInterval) {
+      return;
+    }
+    this.pollingInterval = setInterval(() => {
+      this.api.getEditing(this.docId).subscribe((result: any) => {
+        this.editingRows.set(result.editingRows);
+      });
+    }, 10000);
+  }
+
+  private stopPolling() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
 
   }
 
   restoreOwnEditState() {
-  const myLock = this.editingRows().find((x: any) =>
-    x.sheetIndex === this.sheetIndex &&
-    x.userName.toLowerCase() === this.currentUser?.toLowerCase()
-  );
+    const myLock = this.editingRows().find((x: any) =>
+      x.sheetIndex === this.sheetIndex &&
+      x.userName.toLowerCase() === this.currentUser?.toLowerCase()
+    );
 
-  if (!myLock) {
-    return;
-  }
-
-  setTimeout(() => {
-    const data = this.gridData();
-    const gridRowIndex = data.findIndex((r: any) => r.rowIndex === myLock.rowIndex);
-
-    if (gridRowIndex === -1) {
+    if (!myLock) {
       return;
     }
 
-    const dataItem = data[gridRowIndex];
-
-    // this.popupPinned = true;
-    this.editableRow = dataItem.rowIndex;
-
-    this.editFormGroup = this.createFormGroup({
-      dataItem,
-      isNew: false
-    } as CreateFormGroupArgs);
-
-    this.grid.editRow(gridRowIndex, this.editFormGroup);
-
-    // wait for edit-template DOM to actually render before anchoring
     setTimeout(() => {
-      const tbodyRows = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr');
-      const row = tbodyRows[gridRowIndex];
+      const data = this.gridData();
+      const gridRowIndex = data.findIndex((r: any) => r.rowIndex === myLock.rowIndex);
 
-      if (row) {
-        const firstCell = row.querySelector('td');
-        if (firstCell) {
-          this.popupAnchor = firstCell;
-        }
+      if (gridRowIndex === -1) {
+        return;
       }
 
-      this.hoveredRow = dataItem;
-      this.hoveredGridRow = gridRowIndex;
-      this.showPopup = true;
+      const dataItem = data[gridRowIndex];
+
+      // this.popupPinned = true;
+      this.editableRow = dataItem.rowIndex;
+
+      this.editFormGroup = this.createFormGroup({
+        dataItem,
+        isNew: false
+      } as CreateFormGroupArgs);
+
+      this.grid.editRow(gridRowIndex, this.editFormGroup);
+
+      // wait for edit-template DOM to actually render before anchoring
+      setTimeout(() => {
+        const tbodyRows = this.grid.wrapper.nativeElement.querySelectorAll('tbody tr');
+        const row = tbodyRows[gridRowIndex];
+
+        if (row) {
+          const firstCell = row.querySelector('td');
+          if (firstCell) {
+            this.popupAnchor = firstCell;
+          }
+        }
+
+        this.hoveredRow = dataItem;
+        this.hoveredGridRow = gridRowIndex;
+        this.showPopup = true;
+      });
     });
-  });
-}
+  }
 
   registerSignalREvents() {
 
@@ -697,6 +764,35 @@ hideRowActions() {
         )
       );
 
+    });
+
+    this.signalr.onRowUpdated((event: any) => {
+      console.log('Row Updated:', event);
+
+      // 1. Only act on events for the currently open document
+      if (event.documentId !== this.docId) {
+        return;
+      }
+      // 2. Only act on the sheet currently displayed
+      if (event.sheetIndex !== this.sheetIndex) {
+        return;
+      }
+
+      // always track the latest version, even for my own event (though I skip re-patching below)
+      this.documentVersion.set(event.versionNumber);
+
+
+      if (event.updatedByUserId === this.currentUserId) {
+        return; // I already have this data from the save API response
+      }
+
+      this.gridData.update(rows =>
+        rows.map(row =>
+          row.rowIndex === event.rowIndex
+            ? { ...row, ...event.data, rowIndex: event.rowIndex }
+            : row
+        )
+      );
     });
 
   }

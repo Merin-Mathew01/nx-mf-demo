@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
+export type ConnectionState = 'connected' | 'reconnecting' | 'disconnected';
 
 @Injectable({
   providedIn: 'root'
@@ -8,47 +9,102 @@ export class SignalrService {
 
   private hubConnection!: signalR.HubConnection;
 
+
+  // item 6: connection-state signal for the UI badge
+  connectionState = signal<ConnectionState>('disconnected');
+
   startConnection() {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://10.15.51.144:5444/excelHub', {
+      .withUrl('http://10.15.51.144:3457/excelHub', {
         accessTokenFactory: () => sessionStorage.getItem('token') ?? '', withCredentials: false
       })
       // .withUrl('http://10.15.51.152:5284/excelHub',{
       //   accessTokenFactory: () => sessionStorage.getItem('token') ?? '',withCredentials: false
       // }) 
-      .withAutomaticReconnect()
+      .withAutomaticReconnect({
+        // item 2: uncapped backoff — keeps retrying forever at 30s intervals
+        // instead of SignalR's default (0/2/10/30s then permanently gives up)
+        nextRetryDelayInMilliseconds: retryContext => {
+          const delays = [0, 2000, 5000, 10000, 20000];
+          return delays[retryContext.previousRetryCount] ?? 30000;
+        }
+      })
       .build();
 
-    return this.hubConnection.start();
-  }
+    // item 1: lifecycle handlers, updating the shared state signal
+    this.hubConnection.onreconnecting(() => {
+      console.log('SignalR reconnecting...');
+      this.connectionState.set('reconnecting');
+    });
 
-  stopConnection() {
-    if (this.hubConnection && this.hubConnection.state !== signalR.HubConnectionState.Disconnected) {
-      return this.hubConnection.stop();
-    }
-    return Promise.resolve();
-  }
+    this.hubConnection.onreconnected(() => {
+      console.log('SignalR reconnected');
+      this.connectionState.set('connected');
+    });
 
-  joinDocument(documentId: string) {
-    return this.hubConnection.invoke('JoinDocument', documentId);
-  }
+    this.hubConnection.onclose(() => {
+      console.log('SignalR closed');
+      this.connectionState.set('disconnected');
+    });
 
-  leaveDocument(documentId: string) {
-    return this.hubConnection.invoke('LeaveDocument', documentId);
-  }
+    return this.hubConnection.start()
+      .then(() => {
+        this.connectionState.set('connected');
+      })
+      .catch(err => {
+        this.connectionState.set('disconnected');
+        throw err; // let the component catch this and start polling (item 7)
+      });
+  
+}
 
-  onRowLocked(callback: (data: any) => void) {
-    this.hubConnection.on('RowLocked', callback);
-  }
 
-  onRowUnlocked(callback: (data: any) => void) {
-    this.hubConnection.on('RowUnlocked', callback);
-  }
 
-  removeListeners() {
-    this.hubConnection.off('RowLocked');
-    this.hubConnection.off('RowUnlocked');
+stopConnection() {
+  if (this.hubConnection && this.hubConnection.state !== signalR.HubConnectionState.Disconnected) {
+    return this.hubConnection.stop();
   }
+  return Promise.resolve();
+}
+
+joinDocument(documentId: string) {
+  return this.hubConnection.invoke('JoinDocument', documentId);
+}
+
+leaveDocument(documentId: string) {
+  return this.hubConnection.invoke('LeaveDocument', documentId);
+}
+
+// item 1: expose hooks so the component can react (join, reconcile, polling)
+onReconnecting(callback: () => void) {
+  this.hubConnection.onreconnecting(callback);
+}
+
+onReconnected(callback: () => void) {
+  this.hubConnection.onreconnected(callback);
+}
+
+onClose(callback: () => void) {
+  this.hubConnection.onclose(callback);
+}
+
+onRowLocked(callback: (data: any) => void) {
+  this.hubConnection.on('RowLocked', callback);
+}
+
+onRowUnlocked(callback: (data: any) => void) {
+  this.hubConnection.on('RowUnlocked', callback);
+}
+
+onRowUpdated(callback: (data: any) => void) {
+  this.hubConnection.on('RowUpdated', callback);
+}
+
+removeListeners() {
+  this.hubConnection.off('RowLocked');
+  this.hubConnection.off('RowUnlocked');
+  this.hubConnection.off('RowUpdated');
+}
 }
 
 // import { Injectable } from '@angular/core';
