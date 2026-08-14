@@ -1,4 +1,11 @@
 <lib-navbar></lib-navbar>
+@if (connectionState() === 'connected') {
+  <span class="status-badge live">🟢 SignalR Live</span>
+} @else if (connectionState() === 'reconnecting') {
+  <span class="status-badge reconnecting">🟡 SignalR Reconnecting...</span>
+} @else {
+  <span class="status-badge offline">🔴 Offline (polling)</span>
+}
 <div class="upload-page">
     <div class="upload-card">
 
@@ -38,6 +45,12 @@
 
     </div>
 </div>
+@if (isLoading()) {
+<div class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading data...</p>
+</div>
+}
 <div class="grid-container">
     @if(gridData().length>0){
     <kendo-grid #grid [kendoGridBinding]="gridData()" [pageSize]="20" [pageable]="true" [rowClass]="rowClass">
@@ -202,5 +215,4 @@
     }
 
 </div>
-
 <lib-footer></lib-footer>
