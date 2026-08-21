@@ -43,6 +43,7 @@ export class LoginComponent {
         }),
         error:(reason)=>{
           console.log(reason);
+          console.log("hrr");
         }
       })
     }else{
